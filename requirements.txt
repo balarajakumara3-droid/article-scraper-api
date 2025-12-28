@@ -7,6 +7,7 @@ trafilatura>=1.6.0
 readability-lxml>=0.8.1
 selenium>=4.15.0
 webdriver-manager>=4.0.0
-lxml>=4.9.0
+lxml[html_clean]>=4.9.0
+lxml_html_clean
 html5lib>=1.1
 gunicorn>=21.0.0
