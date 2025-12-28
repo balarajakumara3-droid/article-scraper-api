@@ -547,7 +547,11 @@ def scrape():
         result['timestamp'] = datetime.utcnow().isoformat()
         
         logger.info(f"Successfully scraped {url} using {result.get('method')} in {result['scrape_time']}s")
-        
+
+            # Convert sets to lists for JSON serialization
+    for key, value in result.items():
+        if isinstance(value, set):
+            result[key] = list(value)
         return jsonify(result)
     
     except Exception as e:
