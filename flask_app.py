@@ -60,19 +60,50 @@ def get_random_headers():
 def get_selenium_driver():
     """Context manager for Selenium WebDriver"""
     chrome_options = Options()
-    chrome_options.add_argument('--headless')
+    chrome_options.add_argument('--headless=new')  # Updated headless mode
     chrome_options.add_argument('--no-sandbox')
     chrome_options.add_argument('--disable-dev-shm-usage')
+    chrome_options.add_argument('--disable-gpu')
+    chrome_options.add_argument('--disable-extensions')
     chrome_options.add_argument('--disable-blink-features=AutomationControlled')
+    chrome_options.add_argument('--window-size=1920,1080')
+    chrome_options.add_argument('--single-process')
+    chrome_options.add_argument('--disable-software-rasterizer')
+    chrome_options.add_argument('--remote-debugging-port=9222')
     chrome_options.add_argument(f'user-agent={random.choice(USER_AGENTS)}')
     chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
     chrome_options.add_experimental_option('useAutomationExtension', False)
     
+    # Check for Railway/Docker environment Chrome binary
+    chrome_bin = os.environ.get('CHROME_BIN') or os.environ.get('GOOGLE_CHROME_BIN')
+    if chrome_bin:
+        chrome_options.binary_location = chrome_bin
+    
     driver = None
     try:
-        driver = webdriver.Chrome(options=chrome_options)
+        from selenium.webdriver.chrome.service import Service
+        
+        # Check for ChromeDriver path from environment first
+        chromedriver_path = os.environ.get('CHROMEDRIVER_PATH')
+        if chromedriver_path:
+            service = Service(executable_path=chromedriver_path)
+            driver = webdriver.Chrome(service=service, options=chrome_options)
+        else:
+            # Use webdriver-manager to auto-install ChromeDriver
+            try:
+                from webdriver_manager.chrome import ChromeDriverManager
+                from webdriver_manager.core.os_manager import ChromeType
+                service = Service(ChromeDriverManager().install())
+                driver = webdriver.Chrome(service=service, options=chrome_options)
+            except Exception as wdm_error:
+                logger.warning(f"webdriver-manager failed: {wdm_error}, trying default Chrome")
+                driver = webdriver.Chrome(options=chrome_options)
+            
         driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
         yield driver
+    except Exception as e:
+        logger.error(f"Failed to initialize Selenium driver: {e}")
+        yield None
     finally:
         if driver:
             driver.quit()
@@ -384,6 +415,11 @@ def scrape_with_selenium(url):
         logger.info(f"Attempting scrape with Selenium: {url}")
         
         with get_selenium_driver() as driver:
+            # Check if driver was initialized successfully
+            if driver is None:
+                logger.warning("Selenium driver not available, skipping Selenium strategy")
+                return None
+            
             driver.get(url)
             
             # Wait for content to load
@@ -548,10 +584,11 @@ def scrape():
         
         logger.info(f"Successfully scraped {url} using {result.get('method')} in {result['scrape_time']}s")
 
-            # Convert sets to lists for JSON serialization
-    for key, value in result.items():
-        if isinstance(value, set):
-            result[key] = list(value)
+        # Convert sets to lists for JSON serialization
+        for key, value in result.items():
+            if isinstance(value, set):
+                result[key] = list(value)
+        
         return jsonify(result)
     
     except Exception as e:

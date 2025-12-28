@@ -1,0 +1,12 @@
+# Nixpacks configuration for Railway deployment with Chrome support
+
+[phases.setup]
+nixPkgs = ["chromium", "chromedriver"]
+
+[phases.install]
+cmds = ["pip install -r requirements.txt"]
+
+[variables]
+CHROME_BIN = "/app/.nix-profile/bin/chromium"
+CHROMEDRIVER_PATH = "/app/.nix-profile/bin/chromedriver"
+PYTHONUNBUFFERED = "1"
