@@ -12,13 +12,20 @@ from urllib.parse import urlparse, urljoin
 import re
 from readability import Document
 import trafilatura
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 from contextlib import contextmanager
 import os
+
+# Optional Selenium imports (may not work in all environments)
+SELENIUM_AVAILABLE = False
+try:
+    from selenium import webdriver
+    from selenium.webdriver.chrome.options import Options
+    from selenium.webdriver.common.by import By
+    from selenium.webdriver.support.ui import WebDriverWait
+    from selenium.webdriver.support import expected_conditions as EC
+    SELENIUM_AVAILABLE = True
+except ImportError:
+    pass
 
 # Configure logging
 logging.basicConfig(
@@ -59,6 +66,11 @@ def get_random_headers():
 @contextmanager
 def get_selenium_driver():
     """Context manager for Selenium WebDriver"""
+    if not SELENIUM_AVAILABLE:
+        logger.warning("Selenium not available, skipping")
+        yield None
+        return
+        
     chrome_options = Options()
     chrome_options.add_argument('--headless=new')  # Updated headless mode
     chrome_options.add_argument('--no-sandbox')
